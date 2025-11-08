@@ -3,7 +3,7 @@ use axum::{
     Json,
 };
 use chrono::Utc;
-use core::{
+use domain::{
     BlobId, Contract, ContractId, ContractStatus, DocumentHash, Signer, UserId,
 };
 use serde::{Deserialize, Serialize};

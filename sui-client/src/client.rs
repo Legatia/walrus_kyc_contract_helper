@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use core::{BlobId, ComplianceEvent, Contract, DocumentHash, Error, KycDocument, Result, UserId};
-use sui_sdk::SuiClientBuilder;
+use domain::{BlobId, ComplianceEvent, Contract, DocumentHash, Error, KycDocument, Result, UserId};
+// use sui_sdk::SuiClientBuilder; // Commented out - add when deploying
 use tracing::{debug, info};
 
 use crate::SuiBlockchain;
@@ -25,13 +25,13 @@ impl SuiClient {
     pub async fn init(&self) -> Result<()> {
         debug!("Initializing Sui client for network: {}", self.rpc_url);
 
-        // This will initialize the actual SDK client
-        let _client = SuiClientBuilder::default()
-            .build(&self.rpc_url)
-            .await
-            .map_err(|e| Error::SuiError(format!("Failed to connect to Sui network: {}", e)))?;
+        // TODO: Uncomment when deploying with actual Sui SDK
+        // let _client = SuiClientBuilder::default()
+        //     .build(&self.rpc_url)
+        //     .await
+        //     .map_err(|e| Error::SuiError(format!("Failed to connect to Sui network: {}", e)))?;
 
-        info!("Successfully connected to Sui network");
+        info!("Sui client initialized (stub mode - enable Sui SDK for production)");
         Ok(())
     }
 }

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use core::{BlobId, ComplianceEvent, Contract, DocumentHash, KycDocument, Result, UserId};
+use domain::{BlobId, ComplianceEvent, Contract, DocumentHash, KycDocument, Result, UserId};
 
 pub mod client;
 

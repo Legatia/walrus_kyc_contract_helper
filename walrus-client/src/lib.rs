@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use core::{BlobId, Error, Result};
+use domain::{BlobId, Error, Result};
 use serde::{Deserialize, Serialize};
 
 pub mod client;

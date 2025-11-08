@@ -10,7 +10,7 @@ name = "service"
 path = "src/main.rs"
 
 [dependencies]
-core = { path = "../core" }
+domain = { path = "../domain" }
 walrus-client = { path = "../walrus-client" }
 sui-client = { path = "../sui-client" }
 

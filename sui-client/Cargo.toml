@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-core = { path = "../core" }
+domain = { path = "../domain" }
 
 tokio = { workspace = true }
 async-trait = { workspace = true }
@@ -15,6 +15,7 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-sui-sdk = { workspace = true }
-sui-types = { workspace = true }
-sui-json-rpc-types = { workspace = true }
+hex = { workspace = true }
+# Sui SDK - commented out for now, add back when deploying with correct versions
+# sui-sdk = { workspace = true }
+# sui-types = { workspace = true }

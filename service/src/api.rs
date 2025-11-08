@@ -22,8 +22,8 @@ impl<T: Serialize> ApiResponse<T> {
         }
     }
 
-    pub fn error(message: String) -> ApiResponse<()> {
-        ApiResponse {
+    pub fn error(message: String) -> Self {
+        Self {
             success: false,
             data: None,
             error: Some(message),
@@ -43,9 +43,9 @@ impl<T: Serialize> IntoResponse for ApiResponse<T> {
     }
 }
 
-/// Convert core::Error to ApiResponse
-impl From<core::Error> for ApiResponse<()> {
-    fn from(error: core::Error) -> Self {
+/// Convert domain::Error to ApiResponse
+impl From<domain::Error> for ApiResponse<()> {
+    fn from(error: domain::Error) -> Self {
         ApiResponse::error(error.to_string())
     }
 }

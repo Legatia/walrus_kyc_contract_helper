@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-core = { path = "../core" }
+domain = { path = "../domain" }
 
 tokio = { workspace = true }
 async-trait = { workspace = true }

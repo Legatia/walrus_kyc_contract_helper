@@ -3,7 +3,7 @@ use axum::{
     Json,
 };
 use chrono::Utc;
-use core::{ComplianceEvent, ComplianceEventType, ResourceType, UserId};
+use domain::{ComplianceEvent, ComplianceEventType, ResourceType, UserId};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 use uuid::Uuid;
