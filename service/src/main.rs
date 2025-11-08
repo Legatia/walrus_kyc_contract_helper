@@ -2,6 +2,7 @@ mod api;
 mod config;
 mod handlers;
 mod state;
+mod pdf;
 
 use anyhow::Result;
 use axum::{
