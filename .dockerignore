@@ -1,0 +1,11 @@
+target/
+.git/
+.env
+.env.local
+*.md
+docs/
+.vscode/
+.idea/
+*.swp
+*.log
+move/build/
