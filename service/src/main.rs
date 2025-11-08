@@ -76,6 +76,21 @@ fn api_routes() -> Router<AppState> {
             "/contract/:contract_id/verify",
             get(handlers::contract::verify_signature),
         )
+        // Template routes
+        .route("/templates/create", post(handlers::template::create_template))
+        .route(
+            "/marketplace/templates",
+            get(handlers::template::browse_marketplace),
+        )
+        .route("/templates/:template_id", get(handlers::template::get_template))
+        .route(
+            "/templates/:template_id/instances",
+            post(handlers::template::create_instance),
+        )
+        .route(
+            "/instances/:instance_id/sign",
+            post(handlers::template::sign_instance),
+        )
         // Compliance routes
         .route(
             "/compliance/audit/:user_id",
