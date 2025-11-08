@@ -3,14 +3,19 @@ use axum::{
     Json,
 };
 use domain::{
-    ContractInstance, ContractTemplate, InstanceId, InstanceStatus, TemplateCategory,
+    BlobId, ContractInstance, ContractTemplate, InstanceId, InstanceStatus, TemplateCategory,
     TemplateId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, info};
+use tracing::{debug, error, info, warn};
+use walrus_client::WalrusStorage;
 
-use crate::{api::ApiResponse, state::AppState};
+use crate::{
+    api::ApiResponse,
+    pdf::VariableSubstitutor,
+    state::AppState
+};
 
 /// Request to create a new template
 #[derive(Debug, Deserialize)]
@@ -91,14 +96,96 @@ pub async fn create_template(
 ) -> ApiResponse<CreateTemplateResponse> {
     debug!("Creating new template: {}", request.name);
 
-    // TODO: Implement template creation
-    // 1. Decode PDF
-    // 2. Validate variables exist in PDF
-    // 3. Store in Walrus
-    // 4. Create template on Sui blockchain
-    // 5. Add to marketplace if public
+    // 1. Decode base64 PDF
+    let pdf_bytes = match base64::Engine::decode(
+        &base64::engine::general_purpose::STANDARD,
+        &request.template_pdf
+    ) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            error!("Failed to decode base64 PDF: {}", e);
+            return ApiResponse::error(format!("Invalid base64 PDF: {}", e));
+        }
+    };
 
-    ApiResponse::error("Template creation not yet implemented".to_string())
+    // 2. Extract variables from PDF
+    let extracted_vars = match VariableSubstitutor::extract_variables(&pdf_bytes) {
+        Ok(vars) => {
+            info!("Extracted {} variables from template PDF", vars.len());
+            vars
+        },
+        Err(e) => {
+            warn!("Failed to extract variables from PDF: {}", e);
+            // Use provided variables if extraction fails
+            request.variables.clone()
+        }
+    };
+
+    // Validate that provided variables match extracted variables
+    if !request.variables.is_empty() {
+        let missing: Vec<_> = request.variables.iter()
+            .filter(|v| !extracted_vars.contains(v))
+            .collect();
+        if !missing.is_empty() {
+            warn!("Provided variables not found in PDF: {:?}", missing);
+        }
+    }
+
+    // 3. Store PDF in Walrus
+    let blob_id = match state.walrus.store(pdf_bytes).await {
+        Ok(id) => {
+            info!("Template PDF stored in Walrus: {}", id.as_str());
+            id
+        },
+        Err(e) => {
+            error!("Failed to store template PDF in Walrus: {}", e);
+            return ApiResponse::error(format!("Failed to store PDF: {}", e));
+        }
+    };
+
+    // Parse category
+    let category = match request.category.to_lowercase().as_str() {
+        "mvno" => TemplateCategory::Mvno,
+        "saas" => TemplateCategory::Saas,
+        "nda" => TemplateCategory::Nda,
+        "employment" => TemplateCategory::Employment,
+        "service" => TemplateCategory::Service,
+        "rental" => TemplateCategory::Rental,
+        other => TemplateCategory::Other(other.to_string()),
+    };
+
+    // 4. Create template on Sui blockchain
+    // TODO: Uncomment when Sui SDK is available
+    /*
+    let template_obj = state.sui.create_template(
+        &request.name,
+        &request.description,
+        &blob_id,
+        &extracted_vars,
+        request.price_per_use,
+        request.royalty_percentage,
+        &category,
+        request.is_public,
+    ).await?;
+    */
+
+    // For now, create a mock response
+    let template_id = uuid::Uuid::new_v4().to_string();
+    let sui_object_id = format!("0x{}", hex::encode(&template_id.as_bytes()[..8]));
+
+    info!(
+        "Template created: {} (blob: {}, category: {:?})",
+        template_id,
+        blob_id.as_str(),
+        category
+    );
+
+    ApiResponse::success(CreateTemplateResponse {
+        template_id: template_id.clone(),
+        blob_id: blob_id.as_str().to_string(),
+        sui_object_id: sui_object_id.clone(),
+        marketplace_url: format!("/api/v1/marketplace/templates/{}", template_id),
+    })
 }
 
 /// Browse marketplace templates
@@ -140,17 +227,92 @@ pub async fn create_instance(
 ) -> ApiResponse<CreateInstanceResponse> {
     debug!("Creating instance from template: {}", template_id);
 
-    // TODO: Implement instance creation
     // 1. Get template from blockchain
+    // TODO: Uncomment when Sui SDK is available
+    /*
+    let template = match state.sui.get_template(&template_id).await {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Failed to get template {}: {}", template_id, e);
+            return ApiResponse::error(format!("Template not found: {}", e));
+        }
+    };
+    */
+
+    // For now, use mock template blob_id (in real implementation, get from blockchain)
+    // This should be the Walrus blob_id of the template PDF
+    let template_blob_id = BlobId::new("mock_template_blob_abc123".to_string());
+
     // 2. Validate payment
-    // 3. Generate PDF with variable substitution
-    // 4. Store generated PDF in Walrus
-    // 5. Create instance on Sui blockchain
-    // 6. Record payment transaction
+    // TODO: Implement payment validation
+    // For now, assume payment is valid
+    info!("Payment validation skipped (mock): {}", request.payment_coin_id);
 
-    info!("Instance creation requested for template: {}", template_id);
+    // 3. Fetch template PDF from Walrus
+    let template_pdf = match state.walrus.read(&template_blob_id).await {
+        Ok(pdf) => {
+            info!("Retrieved template PDF from Walrus: {} bytes", pdf.len());
+            pdf
+        },
+        Err(e) => {
+            error!("Failed to fetch template PDF from Walrus: {}", e);
+            return ApiResponse::error(format!("Failed to fetch template: {}", e));
+        }
+    };
 
-    ApiResponse::error("Instance creation not yet implemented".to_string())
+    // 4. Generate unsigned PDF with variable substitution
+    let unsigned_pdf = match VariableSubstitutor::substitute_in_pdf(&template_pdf, &request.variable_data) {
+        Ok(pdf) => {
+            info!("Generated unsigned PDF: {} bytes", pdf.len());
+            pdf
+        },
+        Err(e) => {
+            error!("Failed to substitute variables in PDF: {}", e);
+            return ApiResponse::error(format!("Failed to generate PDF: {}", e));
+        }
+    };
+
+    // 5. Store unsigned PDF in Walrus
+    let unsigned_blob_id = match state.walrus.store(unsigned_pdf).await {
+        Ok(id) => {
+            info!("Unsigned PDF stored in Walrus: {}", id.as_str());
+            id
+        },
+        Err(e) => {
+            error!("Failed to store unsigned PDF in Walrus: {}", e);
+            return ApiResponse::error(format!("Failed to store PDF: {}", e));
+        }
+    };
+
+    // 6. Create instance on Sui blockchain
+    // TODO: Uncomment when Sui SDK is available
+    /*
+    let instance_obj = state.sui.create_instance(
+        &template_id,
+        &unsigned_blob_id,
+        &request.variable_data,
+        &request.required_signers,
+        &request.payment_coin_id,
+    ).await?;
+    */
+
+    // For now, create mock response
+    let instance_id = uuid::Uuid::new_v4().to_string();
+    let payment_tx = format!("0x{}", hex::encode(&instance_id.as_bytes()[..8]));
+
+    info!(
+        "Instance created: {} (unsigned blob: {})",
+        instance_id,
+        unsigned_blob_id.as_str()
+    );
+
+    ApiResponse::success(CreateInstanceResponse {
+        instance_id: instance_id.clone(),
+        generated_blob_id: unsigned_blob_id.as_str().to_string(),
+        document_url: format!("/api/v1/instances/{}/document", instance_id),
+        payment_tx,
+        status: "pending_signatures".to_string(),
+    })
 }
 
 /// Download instance document
@@ -187,14 +349,130 @@ pub async fn sign_instance(
     Path(instance_id): Path<String>,
     Json(request): Json<SignInstanceRequest>,
 ) -> ApiResponse<SignInstanceResponse> {
-    debug!("Signing instance: {}", instance_id);
+    debug!("Signing instance: {} by {}", instance_id, request.signer_address);
 
-    // TODO: Implement instance signing
     // 1. Get instance from blockchain
-    // 2. Validate signer is required
-    // 3. Record signature on Sui
-    // 4. Check if fully signed
-    // 5. Update status if complete
+    // TODO: Uncomment when Sui SDK is available
+    /*
+    let mut instance = match state.sui.get_instance(&instance_id).await {
+        Ok(i) => i,
+        Err(e) => {
+            error!("Failed to get instance {}: {}", instance_id, e);
+            return ApiResponse::error(format!("Instance not found: {}", e));
+        }
+    };
+    */
 
-    ApiResponse::error("Instance signing not yet implemented".to_string())
+    // 2. Validate signer is required
+    // TODO: Check if signer is in required_signers list
+    info!("Signer validation skipped (mock): {}", request.signer_address);
+
+    // 3. Record signature on Sui blockchain
+    // TODO: Uncomment when Sui SDK is available
+    /*
+    match state.sui.record_signature(
+        &instance_id,
+        &request.signer_address,
+        &request.signature,
+    ).await {
+        Ok(_) => info!("Signature recorded on blockchain"),
+        Err(e) => {
+            error!("Failed to record signature: {}", e);
+            return ApiResponse::error(format!("Failed to record signature: {}", e));
+        }
+    };
+    */
+
+    // 4. Check if fully signed
+    // For mock, assume this signature completes the signing
+    let fully_signed = true;
+    let remaining_signers: Vec<String> = vec![];
+
+    // 5. If fully signed, generate signed PDF
+    if fully_signed {
+        info!("Instance {} is now fully signed, generating final PDF", instance_id);
+
+        // Get unsigned PDF blob_id (in real implementation, from blockchain)
+        let unsigned_blob_id = BlobId::new("mock_unsigned_blob_xyz789".to_string());
+
+        // Fetch unsigned PDF from Walrus
+        let unsigned_pdf = match state.walrus.read(&unsigned_blob_id).await {
+            Ok(pdf) => {
+                info!("Retrieved unsigned PDF from Walrus: {} bytes", pdf.len());
+                pdf
+            },
+            Err(e) => {
+                error!("Failed to fetch unsigned PDF from Walrus: {}", e);
+                return ApiResponse::error(format!("Failed to fetch unsigned PDF: {}", e));
+            }
+        };
+
+        // Create signature data
+        // In real implementation, get all signatures from blockchain
+        let signatures = vec![
+            crate::pdf::SignatureData {
+                signer_name: "John Doe".to_string(),
+                sui_address: request.signer_address.clone(),
+                signed_at: chrono::Utc::now(),
+                signature_hash: domain::DocumentHash::from_hex(request.signature.clone()),
+                transaction_digest: format!("0x{}", hex::encode(&instance_id.as_bytes()[..16])),
+            }
+        ];
+
+        // Generate signed PDF with signature blocks
+        let signed_pdf = match crate::pdf::SignatureBlockGenerator::add_signatures_to_pdf(
+            &unsigned_pdf,
+            &signatures
+        ) {
+            Ok(pdf) => {
+                info!("Generated signed PDF: {} bytes", pdf.len());
+                pdf
+            },
+            Err(e) => {
+                error!("Failed to generate signed PDF: {}", e);
+                return ApiResponse::error(format!("Failed to generate signed PDF: {}", e));
+            }
+        };
+
+        // Store signed PDF in Walrus
+        let signed_blob_id = match state.walrus.store(signed_pdf).await {
+            Ok(id) => {
+                info!("Signed PDF stored in Walrus: {}", id.as_str());
+                id
+            },
+            Err(e) => {
+                error!("Failed to store signed PDF in Walrus: {}", e);
+                return ApiResponse::error(format!("Failed to store signed PDF: {}", e));
+            }
+        };
+
+        // Update instance on blockchain with signed blob_id
+        // TODO: Uncomment when Sui SDK is available
+        /*
+        match state.sui.update_instance_signed_document(
+            &instance_id,
+            &signed_blob_id,
+        ).await {
+            Ok(_) => info!("Instance updated with signed document"),
+            Err(e) => {
+                error!("Failed to update instance: {}", e);
+                return ApiResponse::error(format!("Failed to update instance: {}", e));
+            }
+        };
+        */
+
+        info!(
+            "Instance {} fully signed and finalized (signed blob: {})",
+            instance_id,
+            signed_blob_id.as_str()
+        );
+    }
+
+    let signed_at = chrono::Utc::now().to_rfc3339();
+
+    ApiResponse::success(SignInstanceResponse {
+        signed_at,
+        remaining_signers,
+        fully_signed,
+    })
 }
