@@ -27,3 +27,9 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 config = { workspace = true }
+
+# PDF manipulation
+lopdf = "0.32"
+printpdf = "0.7"
+qrcode = "0.14"
+image = "0.25"

@@ -1,10 +1,12 @@
 pub mod generator;
 pub mod substitution;
 pub mod signature_block;
+pub mod qr;
 
 pub use generator::PdfGenerator;
 pub use substitution::VariableSubstitutor;
 pub use signature_block::SignatureBlockGenerator;
+pub use qr::QrCodeGenerator;
 
 use chrono::{DateTime, Utc};
 use domain::DocumentHash;

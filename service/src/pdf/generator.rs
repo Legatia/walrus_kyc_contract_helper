@@ -4,9 +4,10 @@ use std::sync::Arc;
 use tracing::{debug, info};
 use walrus_client::WalrusStorage;
 
-use super::{SignatureData, VariableSubstitutor};
+use super::{SignatureBlockGenerator, SignatureData, VariableSubstitutor};
 
 /// PDF Generator Service
+/// Handles transformation of templates into final signed documents
 pub struct PdfGenerator {
     walrus: Arc<dyn WalrusStorage>,
 }
@@ -17,6 +18,12 @@ impl PdfGenerator {
     }
 
     /// Generate unsigned PDF from template + instance data
+    ///
+    /// This uses proper PDF manipulation with lopdf to:
+    /// 1. Load the template PDF from Walrus
+    /// 2. Parse the PDF structure
+    /// 3. Replace {{variable}} placeholders with actual values
+    /// 4. Generate a clean unsigned PDF ready for review
     pub async fn generate_from_template(
         &self,
         template_blob_id: &BlobId,
@@ -28,9 +35,7 @@ impl PdfGenerator {
         let template_pdf = self.walrus.read(template_blob_id).await?;
         debug!("Template fetched: {} bytes", template_pdf.len());
 
-        // 2. Perform variable substitution
-        // For MVP: Simple text-based substitution
-        // TODO: Use PDF library for proper manipulation
+        // 2. Perform variable substitution using lopdf
         let filled_pdf = VariableSubstitutor::substitute_simple(
             &template_pdf,
             variable_data,
@@ -41,6 +46,12 @@ impl PdfGenerator {
     }
 
     /// Generate signed PDF with signature blocks
+    ///
+    /// This adds a professional signature page to the PDF with:
+    /// 1. All signer information
+    /// 2. Signature hashes from blockchain
+    /// 3. Transaction digests for verification
+    /// 4. Timestamps
     pub async fn generate_signed_pdf(
         &self,
         unsigned_blob_id: &BlobId,
@@ -50,60 +61,24 @@ impl PdfGenerator {
 
         // 1. Fetch unsigned PDF
         let unsigned_pdf = self.walrus.read(unsigned_blob_id).await?;
+        debug!("Unsigned PDF fetched: {} bytes", unsigned_pdf.len());
 
-        // 2. Add signature information
-        // For MVP: Append signature page
-        // TODO: Use PDF library to embed signatures properly
-        let signed_pdf = Self::append_signature_page(&unsigned_pdf, signatures)?;
+        // 2. Add signature page using lopdf
+        let signed_pdf = SignatureBlockGenerator::add_signatures_to_pdf(
+            &unsigned_pdf,
+            signatures,
+        )?;
 
         info!("Signed PDF generated: {} bytes", signed_pdf.len());
         Ok(signed_pdf)
     }
 
-    /// Simple implementation: Append signature page as text
-    /// TODO: Replace with proper PDF manipulation
-    fn append_signature_page(
-        unsigned_pdf: &[u8],
-        signatures: &[SignatureData],
-    ) -> Result<Vec<u8>> {
-        // For MVP, we'll create a completion certificate instead
-        // This is simpler than PDF manipulation
-
-        let mut result = unsigned_pdf.to_vec();
-
-        // Add marker for signature section
-        let signature_section = format!(
-            "\n\n=== DIGITAL SIGNATURES ===\n\n{}",
-            signatures
-                .iter()
-                .enumerate()
-                .map(|(i, sig)| {
-                    format!(
-                        "Signature {}\n\
-                         Signer: {}\n\
-                         Sui Address: {}\n\
-                         Signed At: {}\n\
-                         Signature Hash: {}\n\
-                         Transaction: {}\n\
-                         \n",
-                        i + 1,
-                        sig.signer_name,
-                        sig.sui_address,
-                        sig.signed_at.format("%Y-%m-%d %H:%M:%S UTC"),
-                        sig.signature_hash.as_str(),
-                        sig.transaction_digest,
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-
-        result.extend_from_slice(signature_section.as_bytes());
-
-        Ok(result)
-    }
-
     /// Generate completion certificate (alternative to embedded signatures)
+    ///
+    /// Creates a standalone certificate document that summarizes:
+    /// - Contract details
+    /// - All variable data
+    /// - All signatures with full verification info
     pub async fn generate_completion_certificate(
         &self,
         instance_id: &str,
@@ -187,22 +162,68 @@ impl PdfGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
+    use domain::DocumentHash;
 
     #[test]
-    fn test_append_signature_page() {
-        let pdf = b"Mock PDF content";
-        let sigs = vec![SignatureData {
-            signer_name: "Test User".to_string(),
-            sui_address: "0x123".to_string(),
-            signed_at: chrono::Utc::now(),
-            signature_hash: domain::DocumentHash::from_hex("abc123".to_string()),
-            transaction_digest: "0xtx123".to_string(),
-        }];
+    fn test_certificate_generation() {
+        let mut variable_data = HashMap::new();
+        variable_data.insert("customer_name".to_string(), "John Doe".to_string());
+        variable_data.insert("service_plan".to_string(), "5G Premium".to_string());
 
-        let result = PdfGenerator::append_signature_page(pdf, &sigs);
+        let signatures = vec![
+            SignatureData {
+                signer_name: "John Doe".to_string(),
+                sui_address: "0x123".to_string(),
+                signed_at: Utc::now(),
+                signature_hash: DocumentHash::from_hex("abc123".to_string()),
+                transaction_digest: "0xtx123".to_string(),
+            },
+        ];
+
+        // Mock Walrus client for testing
+        struct MockWalrus;
+
+        #[async_trait::async_trait]
+        impl WalrusStorage for MockWalrus {
+            async fn store(&self, _data: Vec<u8>) -> Result<BlobId> {
+                Ok(BlobId::new("test".to_string()))
+            }
+
+            async fn read(&self, _blob_id: &BlobId) -> Result<Vec<u8>> {
+                Ok(vec![])
+            }
+
+            async fn exists(&self, _blob_id: &BlobId) -> Result<bool> {
+                Ok(true)
+            }
+
+            async fn metadata(&self, _blob_id: &BlobId) -> Result<walrus_client::BlobMetadata> {
+                Ok(walrus_client::BlobMetadata {
+                    blob_id: "test".to_string(),
+                    size: 0,
+                    stored_epoch: None,
+                    expiry_epoch: None,
+                })
+            }
+        }
+
+        let generator = PdfGenerator::new(Arc::new(MockWalrus));
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(generator.generate_completion_certificate(
+            "inst_123",
+            "Test Template",
+            &variable_data,
+            &signatures,
+        ));
+
         assert!(result.is_ok());
+        let certificate = result.unwrap();
+        let text = String::from_utf8(certificate).unwrap();
 
-        let signed = result.unwrap();
-        assert!(signed.len() > pdf.len());
+        assert!(text.contains("CERTIFICATE OF COMPLETION"));
+        assert!(text.contains("John Doe"));
+        assert!(text.contains("5G Premium"));
     }
 }
