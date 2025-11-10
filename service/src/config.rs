@@ -20,6 +20,11 @@ impl AppConfig {
             .add_source(config::Environment::default().separator("_"))
             .set_default("api_host", "0.0.0.0")?
             .set_default("api_port", 8080)?
+            .set_default("sui_rpc_url", "https://fullnode.testnet.sui.io:443")?
+            .set_default("sui_package_id", "0x0000000000000000000000000000000000000000000000000000000000000000")?
+            .set_default("sui_private_key", "")?
+            .set_default("walrus_publisher_url", "https://publisher.walrus-testnet.walrus.space")?
+            .set_default("walrus_aggregator_url", "https://aggregator.walrus-testnet.walrus.space")?
             .set_default("walrus_epochs", 5)?
             .set_default("max_upload_size_mb", 10)?
             .build()?;
