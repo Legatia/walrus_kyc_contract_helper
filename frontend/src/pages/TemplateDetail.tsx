@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileText, Users, DollarSign, AlertCircle, Check, Plus, X } from 'lucide-react';
+import { FileText, Users, DollarSign, AlertCircle, Check, Plus, X, Wallet } from 'lucide-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { api } from '@/lib/api';
+import { usePayment } from '@/lib/usePayment';
 import { formatPrice } from '@/lib/utils';
 import type { Template, CreateInstanceRequest, SignerRequest } from '@/types';
 
 export function TemplateDetail() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
+  const account = useCurrentAccount();
+  const { payForTemplate, isProcessing: isPaymentProcessing } = usePayment();
 
   const [template, setTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +66,13 @@ export function TemplateDetail() {
   };
 
   const handleCreateInstance = async () => {
-    if (!templateId) return;
+    if (!templateId || !template) return;
+
+    // Check wallet connection
+    if (!account) {
+      setError('Please connect your Sui wallet to continue');
+      return;
+    }
 
     // Validation
     const emptyVariables = Object.entries(variableData).filter(([_, v]) => !v);
@@ -81,10 +91,17 @@ export function TemplateDetail() {
     setError('');
 
     try {
+      // Step 1: Process payment for template usage
+      // Template creator address (in real app, get from template metadata)
+      const creatorAddress = template.creator || '0x0000000000000000000000000000000000000000000000000000000000000001';
+
+      const paymentResult = await payForTemplate(creatorAddress, template.price);
+
+      // Step 2: Create instance with payment proof
       const request: CreateInstanceRequest = {
         variable_data: variableData,
         required_signers: signers,
-        payment_coin_id: '0x0000000000000000000000000000000000000000', // Mock payment
+        payment_coin_id: paymentResult.digest, // Use transaction digest as payment proof
       };
 
       const response = await api.createInstance(templateId, request);
@@ -285,20 +302,38 @@ export function TemplateDetail() {
                 </div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
-                  <strong>Note:</strong> You will be charged {formatPrice(template.price)}{' '}
-                  to create this contract instance. The generated document will be stored on
-                  Walrus and signers can sign it on the blockchain.
-                </p>
-              </div>
+              {!account ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                  <Wallet className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900">Wallet Required</p>
+                    <p className="text-sm text-yellow-800 mt-1">
+                      Please connect your Sui wallet to pay for template usage and create an instance.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    <strong>Payment Required:</strong> You will be charged {formatPrice(template.price)}{' '}
+                    from your connected wallet. The payment will be transferred to the template creator,
+                    and the generated document will be stored on Walrus.
+                  </p>
+                </div>
+              )}
 
               <button
                 onClick={handleCreateInstance}
-                disabled={creating}
+                disabled={creating || isPaymentProcessing || !account}
                 className="btn-primary w-full"
               >
-                {creating ? 'Creating Instance...' : 'Create Contract Instance'}
+                {isPaymentProcessing
+                  ? 'Processing Payment...'
+                  : creating
+                  ? 'Creating Instance...'
+                  : !account
+                  ? 'Connect Wallet to Continue'
+                  : 'Pay & Create Contract Instance'}
               </button>
             </div>
           </div>

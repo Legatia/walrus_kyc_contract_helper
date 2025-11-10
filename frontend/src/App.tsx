@@ -1,43 +1,48 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { FileText, Plus, Home } from 'lucide-react';
+import { SuiProvider } from './lib/SuiProvider';
+import { WalletButton } from './components/WalletButton';
 import { Marketplace } from './pages/Marketplace';
 import { CreateTemplate } from './pages/CreateTemplate';
 import { TemplateDetail } from './pages/TemplateDetail';
 import { InstanceDetail } from './pages/InstanceDetail';
 import { Verify } from './pages/Verify';
+import '@mysten/dapp-kit/dist/index.css';
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        {/* Navigation */}
-        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex items-center justify-between h-16">
-              <Link to="/" className="flex items-center gap-2 text-xl font-bold text-gray-900">
-                <FileText className="h-6 w-6 text-primary-600" />
-                <span>Walrus KYC</span>
-              </Link>
+    <SuiProvider>
+      <Router>
+        <div className="min-h-screen bg-gray-50">
+          {/* Navigation */}
+          <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="flex items-center justify-between h-16">
+                <Link to="/" className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                  <FileText className="h-6 w-6 text-primary-600" />
+                  <span>Walrus KYC</span>
+                </Link>
 
-              <div className="flex items-center gap-4">
-                <Link
-                  to="/marketplace"
-                  className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
-                >
-                  <Home className="h-5 w-5" />
-                  <span className="hidden sm:inline">Marketplace</span>
-                </Link>
-                <Link
-                  to="/create-template"
-                  className="flex items-center gap-2 btn-primary"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span className="hidden sm:inline">Create Template</span>
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link
+                    to="/marketplace"
+                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
+                  >
+                    <Home className="h-5 w-5" />
+                    <span className="hidden sm:inline">Marketplace</span>
+                  </Link>
+                  <Link
+                    to="/create-template"
+                    className="flex items-center gap-2 btn-primary"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span className="hidden sm:inline">Create Template</span>
+                  </Link>
+                  <WalletButton />
+                </div>
               </div>
             </div>
-          </div>
-        </nav>
+          </nav>
 
         {/* Routes */}
         <Routes>
@@ -79,8 +84,9 @@ function App() {
             </div>
           </div>
         </footer>
-      </div>
-    </Router>
+        </div>
+      </Router>
+    </SuiProvider>
   );
 }
 
