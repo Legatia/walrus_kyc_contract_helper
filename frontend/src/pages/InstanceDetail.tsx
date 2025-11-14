@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileText, Download, CheckCircle, Clock, AlertCircle, Shield } from 'lucide-react';
+import { Download, CheckCircle, Clock, AlertCircle, Shield } from 'lucide-react';
 import QRCode from 'qrcode.react';
 import { api } from '@/lib/api';
 import { shortenAddress, formatDate } from '@/lib/utils';

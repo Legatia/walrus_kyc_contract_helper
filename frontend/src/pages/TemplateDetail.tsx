@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileText, Users, DollarSign, AlertCircle, Check, Plus, X, Wallet } from 'lucide-react';
+import { FileText, Users, DollarSign, AlertCircle, Plus, X, Wallet } from 'lucide-react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { api } from '@/lib/api';
 import { usePayment } from '@/lib/usePayment';
