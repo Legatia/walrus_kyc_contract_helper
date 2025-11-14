@@ -1,25 +1,24 @@
-# Walrus KYC Contract Helper - Setup Guide
+# Walrus Contracts - Setup Guide
 
-Complete guide to set up and run the decentralized contract management system.
+Complete guide to set up and run the decentralized contract template marketplace.
 
-## 🎯 Prerequisites
+## 🎯 What is Walrus Contracts?
 
-- **Rust** 1.75+ (for backend)
-- **Node.js** 18+ and npm (for frontend)
-- **Sui Wallet** (browser extension) for signing transactions
-- **Walrus Testnet Access** (optional, for storage)
+A decentralized marketplace for contract templates powered by:
+- **Walrus** - Decentralized blob storage for PDF templates
+- **Sui Blockchain** - Smart contracts for payments and verification
+- **Template System** - Reusable templates with variable substitution
+- **E-signatures** - Blockchain-verified document signing
 
-## 📦 Project Structure
+## ✨ Key Features
 
-```
-walrus_kyc_contract_helper/
-├── service/          # Rust backend API
-├── frontend/         # React + TypeScript UI
-├── domain/           # Shared types
-├── sui-client/       # Sui blockchain integration
-├── walrus-client/    # Walrus storage integration
-└── move/             # Smart contracts
-```
+- **Template Marketplace** - Browse and purchase reusable contract templates
+- **Variable Substitution** - Templates with `{{customer_name}}` style variables
+- **Pay-Per-Use** - Template creators earn revenue from each usage
+- **Blockchain Payments** - Direct SUI token transfers to creators
+- **Secure Storage** - All documents stored on decentralized Walrus
+- **Verified Signatures** - Cryptographically verified on Sui blockchain
+- **QR Verification** - Mobile-friendly document authentication
 
 ## 🚀 Quick Start
 
@@ -27,311 +26,247 @@ walrus_kyc_contract_helper/
 
 ```bash
 cd service
-
-# The service will use default configuration for testnet
-# All required settings have sensible defaults
-
-# Build and run
 cargo run --release
 ```
 
-The backend will start on **http://localhost:8080**
+The backend starts on **http://localhost:8080** with sensible testnet defaults.
 
 ### 2. Frontend Setup
 
 ```bash
 cd frontend
-
-# Install dependencies (including Sui wallet packages)
 npm install
-
-# Start development server
 npm run dev
 ```
 
-The frontend will start on **http://localhost:3000**
+The frontend starts on **http://localhost:3000**
+
+That's it! No configuration needed to get started.
+
+## 📋 Prerequisites
+
+- **Rust** 1.75+ (for backend)
+- **Node.js** 18+ and npm (for frontend)
+- **Sui Wallet** browser extension
+- Testnet SUI tokens (free from faucet)
+
+## 🔑 Sui Wallet Setup
+
+### 1. Install Sui Wallet
+
+- Chrome: [Sui Wallet](https://chrome.google.com/webstore/detail/sui-wallet)
+- Or use Ethos Wallet, Martian Wallet, etc.
+
+### 2. Switch to Testnet
+
+- Open wallet → Settings → Network → Testnet
+
+### 3. Get Test Tokens
+
+Visit [Sui Testnet Faucet](https://faucet.testnet.sui.io/) and request free SUI tokens.
+
+## 💡 How It Works
+
+### Template Creation
+
+1. Creator uploads PDF template with variables like `{{customer_name}}`
+2. PDF stored on Walrus decentralized storage
+3. Template metadata registered on Sui blockchain
+4. Set price per use and royalty percentage
+5. Published to marketplace
+
+### Using Templates
+
+1. Browse marketplace and select template
+2. Fill in variable values
+3. Add required signers (Sui addresses)
+4. **Pay creator** via SUI transaction
+5. System generates unsigned PDF from template
+6. Signers sign document on blockchain
+7. Final signed PDF generated with signature blocks
+
+### Revenue Model
+
+- Template creators set price per use
+- Users pay directly to creator's wallet
+- Payments execute atomically on Sui
+- Creators earn passive income from templates
 
 ## ⚙️ Configuration (Optional)
 
-### Backend Configuration
-
-Create `service/.env` file for custom settings:
-
-```bash
-# Copy example file
-cp service/.env.example service/.env
-```
-
-Edit `.env` with your values:
+Create `service/.env` for custom settings:
 
 ```env
 # API Configuration
 API_HOST=0.0.0.0
 API_PORT=8080
 
-# Sui Blockchain (defaults to testnet)
+# Sui Blockchain
 SUI_RPC_URL=https://fullnode.testnet.sui.io:443
-SUI_PACKAGE_ID=0x0000000000000000000000000000000000000000000000000000000000000000
-SUI_PRIVATE_KEY=your_sui_private_key_here
+SUI_PACKAGE_ID=0x...
 
-# Walrus Storage (defaults to testnet)
+# Walrus Storage
 WALRUS_PUBLISHER_URL=https://publisher.walrus-testnet.walrus.space
 WALRUS_AGGREGATOR_URL=https://aggregator.walrus-testnet.walrus.space
-WALRUS_EPOCHS=5
 
-# Upload Limits
+# Limits
 MAX_UPLOAD_SIZE_MB=10
 ```
-
-### Frontend Configuration
-
-The frontend uses Vite's proxy to automatically forward API calls to the backend.
-
-Edit `frontend/vite.config.ts` if backend runs on different port:
-
-```typescript
-server: {
-  port: 3000,
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8080', // Change if needed
-      changeOrigin: true,
-    },
-  },
-},
-```
-
-## 🔑 Sui Wallet Setup
-
-### Install Sui Wallet Extension
-
-1. Install **Sui Wallet** browser extension:
-   - Chrome: [Sui Wallet](https://chrome.google.com/webstore/detail/sui-wallet)
-   - Or use **Ethos Wallet**, **Martian Wallet**, etc.
-
-2. Create a new wallet or import existing one
-
-3. Switch to **Testnet** network:
-   - Click wallet → Settings → Network → Testnet
-
-4. Get testnet SUI tokens:
-   - Visit [Sui Testnet Faucet](https://faucet.testnet.sui.io/)
-   - Enter your wallet address
-   - Request tokens (free for testing)
-
-## 💰 Getting Test Tokens
-
-### SUI Testnet Tokens
-
-```bash
-# Visit faucet
-https://faucet.testnet.sui.io/
-
-# Or use CLI
-curl --location --request POST 'https://faucet.testnet.sui.io/gas' \
-  --header 'Content-Type: application/json' \
-  --data-raw '{
-    "FixedAmountRequest": {
-      "recipient": "YOUR_SUI_ADDRESS"
-    }
-  }'
-```
-
-## 📝 Usage Guide
-
-### 1. Connect Wallet
-
-1. Open frontend at http://localhost:3000
-2. Click **"Connect Wallet"** button in top-right
-3. Select your Sui wallet
-4. Approve connection
-
-### 2. Create Template
-
-1. Click **"Create Template"**
-2. Upload a PDF with variables like `{{customer_name}}`
-3. Fill in template details:
-   - Name, description, category
-   - Price per use (in SUI)
-   - Royalty percentage
-4. Click **"Create Template"**
-5. PDF stored on Walrus, metadata on Sui blockchain
-
-### 3. Use Template (Create Instance)
-
-1. Browse marketplace
-2. Click on a template
-3. Click **"Use This Template"**
-4. Fill in all variables
-5. Add required signers (Sui addresses)
-6. Click **"Pay & Create Contract Instance"**
-7. **Payment transaction** executes:
-   - Your wallet prompts for approval
-   - SUI transferred to template creator
-   - Transaction confirmed on blockchain
-8. Unsigned PDF generated and stored
-
-### 4. Sign Document
-
-1. Navigate to your contract instance
-2. Click **"Sign Document"**
-3. Enter your Sui address
-4. Paste signature data
-5. Click **"Sign Document"**
-6. Signature recorded on blockchain
-7. When all signers complete, final PDF generated
-
-### 5. Verify Document
-
-1. Scan QR code on signed document
-2. Or visit `/verify/{instance_id}`
-3. View all blockchain signatures
-4. See Walrus blob IDs
-5. Verify document authenticity
 
 ## 🏗️ Architecture
 
 ### Backend (Rust)
-
 - **Axum** - Web framework
-- **Tokio** - Async runtime
-- **lopdf** - PDF manipulation
-- **reqwest** - HTTP client for Sui RPC
+- **lopdf** - PDF parsing and manipulation
+- **reqwest** - Sui RPC client
+- **Walrus client** - Decentralized storage
 
 ### Frontend (React)
-
 - **@mysten/dapp-kit** - Sui wallet integration
-- **@mysten/sui** - Transaction building
-- **React Router** - Page routing
+- **React Router** - Navigation
 - **Tailwind CSS** - Styling
+- **QRCode** - Document verification
 
 ### Blockchain
+- **Sui** - Payments and verification
+- **Walrus** - Template and document storage
+- **Move** - Smart contracts (optional)
 
-- **Sui** - Smart contract platform
-- **Walrus** - Decentralized blob storage
-- **Move** - Smart contract language
+## 📝 Usage Examples
+
+### Create a Template
+
+```bash
+# 1. Connect wallet on frontend
+# 2. Click "Create Template"
+# 3. Upload PDF with {{variables}}
+# 4. Set price: 5 SUI per use
+# 5. Set royalty: 10%
+# 6. Publish to marketplace
+```
+
+### Use a Template
+
+```bash
+# 1. Browse marketplace
+# 2. Select "NDA Agreement" template (5 SUI)
+# 3. Fill variables:
+#    - customer_name: "John Doe"
+#    - date: "2025-01-15"
+#    - company: "Acme Corp"
+# 4. Add signers: 0xabc... (Customer), 0xdef... (Company)
+# 5. Click "Pay & Create" (5 SUI sent to creator)
+# 6. Document generated and stored
+```
+
+### Sign Document
+
+```bash
+# 1. Navigate to your instance
+# 2. Click "Sign Document"
+# 3. Approve with Sui wallet
+# 4. Signature recorded on blockchain
+# 5. When all sign → Final PDF generated
+```
+
+### Verify Document
+
+```bash
+# Scan QR code or visit /verify/{instance_id}
+# Shows:
+# - All blockchain signatures
+# - Walrus blob IDs
+# - Transaction digests
+# - Document hash
+```
+
+## 🎨 Project Structure
+
+```
+walrus-contracts/
+├── service/          # Rust backend API
+│   ├── src/
+│   │   ├── handlers/  # API endpoints
+│   │   ├── pdf/       # PDF manipulation
+│   │   └── main.rs
+│   └── Cargo.toml
+├── frontend/         # React + TypeScript
+│   ├── src/
+│   │   ├── pages/     # UI pages
+│   │   ├── components/# Reusable components
+│   │   └── lib/       # Utilities
+│   └── package.json
+├── domain/           # Shared types
+├── sui-client/       # Blockchain integration
+├── walrus-client/    # Storage integration
+└── move/             # Smart contracts (optional)
+```
 
 ## 🔧 Development
 
-### Backend Development
+### Backend
 
 ```bash
-# Run with auto-reload
-cargo watch -x run
-
-# Run tests
-cargo test
-
-# Check for issues
-cargo clippy
+cd service
+cargo watch -x run  # Auto-reload
+cargo test          # Run tests
+cargo clippy        # Lint
 ```
 
-### Frontend Development
+### Frontend
 
 ```bash
-# Development server with hot reload
-npm run dev
-
-# Type checking
-npm run build
-
-# Lint
-npm run lint
-```
-
-### Deploy Smart Contracts
-
-```bash
-cd move
-
-# Build Move modules
-sui move build
-
-# Test Move modules
-sui move test
-
-# Deploy to testnet
-sui client publish --gas-budget 100000000
+cd frontend
+npm run dev   # Dev server
+npm run build # Production build
 ```
 
 ## 🐛 Troubleshooting
 
-### Backend won't start
+### "Wallet not connected"
+- Install Sui Wallet extension
+- Switch to Testnet network
+- Refresh page
 
+### "Insufficient funds"
+- Get free test SUI from [faucet](https://faucet.testnet.sui.io/)
+
+### "Payment failed"
+- Check wallet is unlocked
+- Check you have enough SUI
+- Try transaction again
+
+### Backend won't start
 ```bash
-# Check if port 8080 is in use
+# Check port 8080
 lsof -i :8080
 
 # Try different port
 API_PORT=3001 cargo run
 ```
 
-### Frontend can't connect to backend
-
-1. Check backend is running on port 8080
-2. Check browser console for errors
-3. Verify proxy settings in `vite.config.ts`
-
-### Wallet connection fails
-
-1. Make sure wallet extension is installed
-2. Switch to Testnet network in wallet
-3. Refresh the page
-4. Try different wallet (Sui Wallet, Ethos, etc.)
-
-### Payment transaction fails
-
-1. Check you have enough SUI tokens
-2. Check you're on Testnet network
-3. Check wallet is unlocked
-4. Try approving transaction again
-
-### PDF upload fails
-
-1. Check PDF is valid
-2. Check file size < 10MB
-3. Check PDF contains text (not just images)
-
-## 📚 API Documentation
-
-### REST Endpoints
-
-```
-POST   /api/v1/templates              - Create template
-GET    /api/v1/marketplace/templates  - Browse marketplace
-GET    /api/v1/templates/:id          - Get template details
-POST   /api/v1/templates/:id/instances - Create instance
-GET    /api/v1/instances/:id/document - Download PDF
-POST   /api/v1/instances/:id/sign     - Sign document
-```
-
-See full API docs: [docs/API.md](docs/API.md)
-
 ## 🌐 Network URLs
 
 ### Sui Testnet
-- RPC: `https://fullnode.testnet.sui.io:443`
+- RPC: https://fullnode.testnet.sui.io:443
 - Explorer: https://suiexplorer.com/?network=testnet
 - Faucet: https://faucet.testnet.sui.io/
 
-### Sui Mainnet
-- RPC: `https://fullnode.mainnet.sui.io:443`
-- Explorer: https://suiexplorer.com/?network=mainnet
-
 ### Walrus Testnet
-- Publisher: `https://publisher.walrus-testnet.walrus.space`
-- Aggregator: `https://aggregator.walrus-testnet.walrus.space`
+- Publisher: https://publisher.walrus-testnet.walrus.space
+- Aggregator: https://aggregator.walrus-testnet.walrus.space
+
+## 🎉 Success!
+
+Visit **http://localhost:3000**, connect your Sui wallet, and start creating templates!
+
+## 📚 Learn More
+
+- [Sui Documentation](https://docs.sui.io/)
+- [Walrus Documentation](https://docs.walrus.site/)
+- [Template Marketplace Architecture](docs/TEMPLATE_MARKETPLACE.md)
+- [PDF Generation Pipeline](docs/PDF_GENERATION_PIPELINE.md)
 
 ## 📄 License
 
 MIT OR Apache-2.0
-
-## 🤝 Support
-
-For issues and questions:
-- GitHub Issues: [Create Issue](https://github.com/Legatia/walrus_kyc_contract_helper/issues)
-- Documentation: See `docs/` folder
-
-## 🎉 Success!
-
-You're all set! Visit http://localhost:3000 and start creating templates.

@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
         )
         .init();
 
-    info!("Starting Walrus KYC & Contract Compliance Service");
+    info!("Starting Walrus Contract Marketplace Service");
 
     // Load configuration
     let config = AppConfig::load()?;
@@ -62,11 +62,29 @@ async fn main() -> Result<()> {
 
 fn api_routes() -> Router<AppState> {
     Router::new()
-        // KYC routes
-        .route("/kyc/upload", post(handlers::kyc::upload_kyc_document))
-        .route("/kyc/:user_id", get(handlers::kyc::get_user_kyc_status))
-        .route("/kyc/verify", post(handlers::kyc::verify_kyc_document))
-        // Contract routes
+        // Template marketplace routes
+        .route("/templates", post(handlers::template::create_template))
+        .route(
+            "/marketplace/templates",
+            get(handlers::template::browse_marketplace),
+        )
+        .route(
+            "/marketplace/templates/:template_id",
+            get(handlers::template::get_template),
+        )
+        .route(
+            "/templates/:template_id/instances",
+            post(handlers::template::create_instance),
+        )
+        .route(
+            "/instances/:instance_id/document",
+            get(handlers::template::download_instance_document),
+        )
+        .route(
+            "/instances/:instance_id/sign",
+            post(handlers::template::sign_instance),
+        )
+        // Legacy contract routes (for backward compatibility)
         .route("/contract/create", post(handlers::contract::create_contract))
         .route("/contract/sign", post(handlers::contract::sign_contract))
         .route(
@@ -76,29 +94,5 @@ fn api_routes() -> Router<AppState> {
         .route(
             "/contract/:contract_id/verify",
             get(handlers::contract::verify_signature),
-        )
-        // Template routes
-        .route("/templates/create", post(handlers::template::create_template))
-        .route(
-            "/marketplace/templates",
-            get(handlers::template::browse_marketplace),
-        )
-        .route("/templates/:template_id", get(handlers::template::get_template))
-        .route(
-            "/templates/:template_id/instances",
-            post(handlers::template::create_instance),
-        )
-        .route(
-            "/instances/:instance_id/sign",
-            post(handlers::template::sign_instance),
-        )
-        // Compliance routes
-        .route(
-            "/compliance/audit/:user_id",
-            get(handlers::compliance::get_audit_trail),
-        )
-        .route(
-            "/compliance/gdpr/delete",
-            post(handlers::compliance::gdpr_delete_request),
         )
 }

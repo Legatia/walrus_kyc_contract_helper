@@ -68,44 +68,6 @@ impl DocumentHash {
     }
 }
 
-/// KYC document types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum DocumentType {
-    Passport,
-    DriverLicense,
-    NationalId,
-    ProofOfAddress,
-    Other(String),
-}
-
-/// KYC verification status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum VerificationStatus {
-    Pending,
-    Approved,
-    Rejected,
-    RequiresReview,
-}
-
-/// KYC Document metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KycDocument {
-    pub id: Uuid,
-    pub user_id: UserId,
-    pub document_type: DocumentType,
-    pub blob_id: BlobId,
-    pub document_hash: DocumentHash,
-    pub file_name: String,
-    pub file_size: u64,
-    pub mime_type: String,
-    pub uploaded_at: DateTime<Utc>,
-    pub verification_status: VerificationStatus,
-    pub verified_at: Option<DateTime<Utc>>,
-    pub sui_object_id: Option<String>, // Reference to on-chain record
-}
-
 /// Contract metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Contract {
@@ -142,13 +104,13 @@ pub struct Signer {
     pub signature_hash: Option<DocumentHash>,
 }
 
-/// Compliance event for audit trail
+/// Audit event for tracking contract operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ComplianceEvent {
+pub struct AuditEvent {
     pub id: Uuid,
-    pub event_type: ComplianceEventType,
+    pub event_type: AuditEventType,
     pub user_id: Option<UserId>,
-    pub resource_id: String, // Could be KYC doc ID, contract ID, etc.
+    pub resource_id: String, // Contract ID, template ID, etc.
     pub resource_type: ResourceType,
     pub action: String,
     pub metadata: serde_json::Value,
@@ -158,24 +120,22 @@ pub struct ComplianceEvent {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum ComplianceEventType {
-    KycUpload,
-    KycVerification,
-    ContractCreated,
+pub enum AuditEventType {
+    TemplateCreated,
+    TemplateUpdated,
+    InstanceCreated,
     ContractSigned,
     DocumentAccessed,
     DocumentDeleted,
-    GdprRequest,
-    AuditLog,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceType {
-    KycDocument,
+    Template,
+    Instance,
     Contract,
     User,
-    System,
 }
 
 /// Configuration for Walrus storage

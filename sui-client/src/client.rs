@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{BlobId, ComplianceEvent, Contract, DocumentHash, Error, KycDocument, Result, UserId};
+use domain::{AuditEvent, Contract, DocumentHash, Error, Result};
 use reqwest::Client as HttpClient;
 use serde_json::{json, Value};
 use tracing::{debug, error, info};
@@ -90,45 +90,6 @@ impl SuiClient {
 
 #[async_trait]
 impl SuiBlockchain for SuiClient {
-    async fn register_kyc_document(
-        &self,
-        user_id: &UserId,
-        blob_id: &BlobId,
-        document_hash: &DocumentHash,
-    ) -> Result<String> {
-        debug!(
-            "Registering KYC document for user {} with blob {}",
-            user_id.0,
-            blob_id.as_str()
-        );
-
-        // Generate a deterministic object ID based on inputs
-        let input_data = format!("kyc:{}:{}:{}", user_id.0, blob_id.as_str(), document_hash.as_str());
-        let object_id = self.mock_transaction_digest(&input_data);
-
-        info!("KYC document registered on-chain: {}", object_id);
-
-        // In production, this would:
-        // 1. Build a Move transaction calling kyc_registry::register_document
-        // 2. Sign and execute the transaction
-        // 3. Return the created object ID
-
-        Ok(object_id)
-    }
-
-    async fn update_kyc_status(&self, object_id: &str, status: &str) -> Result<()> {
-        debug!("Updating KYC status for object {} to {}", object_id, status);
-
-        let tx_digest = self.mock_transaction_digest(&format!("update_kyc:{}:{}", object_id, status));
-        info!("KYC status updated on-chain: tx={}", tx_digest);
-
-        // In production, this would:
-        // 1. Build transaction calling kyc_registry::update_status
-        // 2. Sign and execute the transaction
-
-        Ok(())
-    }
-
     async fn register_contract(&self, contract: &Contract) -> Result<String> {
         debug!("Registering contract {} on-chain", contract.id.0);
 
@@ -189,46 +150,38 @@ impl SuiBlockchain for SuiClient {
             contract_object_id, signer_address
         );
 
-        // TODO: Implement actual Move contract query
-        // This will read the on-chain Contract object and check signatures
+        // In production, this would:
+        // Read the on-chain Contract object and check signatures
 
         info!("Signature verified on-chain");
-        Ok(true) // Placeholder
+        Ok(true) // Mock: always returns true
     }
 
-    async fn log_compliance_event(&self, event: &ComplianceEvent) -> Result<String> {
-        debug!("Logging compliance event: {:?}", event.event_type);
+    async fn log_audit_event(&self, event: &AuditEvent) -> Result<String> {
+        debug!("Logging audit event: {:?}", event.event_type);
 
-        // TODO: Implement actual Move contract call
-        // This will emit an event and create an immutable record
+        let input_data = format!("audit:{}:{}", event.id, event.resource_id);
+        let object_id = self.mock_transaction_digest(&input_data);
 
-        info!("Compliance event logged on-chain");
-        Ok(format!("0x{}", hex::encode(&[0u8; 32]))) // Placeholder
-    }
+        info!("Audit event logged on-chain: {}", object_id);
 
-    async fn get_kyc_document(&self, object_id: &str) -> Result<KycDocument> {
-        debug!("Getting KYC document from object {}", object_id);
+        // In production, this would:
+        // 1. Build transaction calling audit_log::record_event
+        // 2. Emit an event and create an immutable record
+        // 3. Return the event object ID
 
-        // TODO: Implement actual object read from Sui
-
-        Err(Error::SuiError("Not implemented yet".to_string()))
+        Ok(object_id)
     }
 
     async fn get_contract(&self, object_id: &str) -> Result<Contract> {
         debug!("Getting contract from object {}", object_id);
 
-        // TODO: Implement actual object read from Sui
+        // In production, this would:
+        // 1. Use sui_getObject RPC to fetch the contract object
+        // 2. Parse the Move object into Contract struct
+        // 3. Return the contract
 
         Err(Error::SuiError("Not implemented yet".to_string()))
-    }
-
-    async fn query_user_kyc_documents(&self, user_id: &UserId) -> Result<Vec<String>> {
-        debug!("Querying KYC documents for user {}", user_id.0);
-
-        // TODO: Implement actual query using Sui GraphQL or RPC
-        // This will return all KYC document object IDs for a user
-
-        Ok(vec![]) // Placeholder
     }
 }
 

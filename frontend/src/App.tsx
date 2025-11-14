@@ -20,7 +20,7 @@ function App() {
               <div className="flex items-center justify-between h-16">
                 <Link to="/" className="flex items-center gap-2 text-xl font-bold text-gray-900">
                   <FileText className="h-6 w-6 text-primary-600" />
-                  <span>Walrus KYC</span>
+                  <span>Walrus Contracts</span>
                 </Link>
 
                 <div className="flex items-center gap-4">
