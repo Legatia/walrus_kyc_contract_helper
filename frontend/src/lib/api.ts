@@ -9,6 +9,7 @@ import type {
   SignInstanceRequest,
   SignInstanceResponse,
 } from '@/types';
+import { getAuthToken } from './zklogin';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -19,6 +20,15 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+    });
+
+    // Add request interceptor to include auth token
+    this.client.interceptors.request.use((config) => {
+      const token = getAuthToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
     });
   }
 

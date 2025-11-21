@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 use walrus_client::WalrusStorage;
+use sui_client::SuiBlockchain;
 
 use crate::{
     api::ApiResponse,
@@ -244,9 +245,39 @@ pub async fn create_instance(
     let template_blob_id = BlobId::new("mock_template_blob_abc123".to_string());
 
     // 2. Validate payment
-    // TODO: Implement payment validation
-    // For now, assume payment is valid
-    info!("Payment validation skipped (mock): {}", request.payment_coin_id);
+    info!("Validating payment transaction: {}", request.payment_coin_id);
+
+    // Get template to validate payment amount and recipient
+    // For now, we'll use mock values until template retrieval is implemented
+    let expected_amount: u64 = 1000000; // 0.001 SUI in MIST
+    let expected_recipient = "0x1234567890"; // Template creator address
+
+    match state.sui.validate_payment(
+        &request.payment_coin_id,
+        expected_recipient,
+        expected_amount,
+    ).await {
+        Ok(validation) => {
+            if !validation.valid {
+                error!(
+                    "Payment validation failed: tx={}, expected_amount={}, actual_amount={}",
+                    request.payment_coin_id, expected_amount, validation.amount
+                );
+                return ApiResponse::error(format!(
+                    "Payment validation failed. Expected {} MIST to {}, got {} MIST",
+                    expected_amount, expected_recipient, validation.amount
+                ));
+            }
+            info!(
+                "Payment validated successfully: {} MIST from {} to {}",
+                validation.amount, validation.sender, validation.recipient
+            );
+        }
+        Err(e) => {
+            error!("Failed to validate payment: {}", e);
+            return ApiResponse::error(format!("Payment validation error: {}", e));
+        }
+    }
 
     // 3. Fetch template PDF from Walrus
     let template_pdf = match state.walrus.read(&template_blob_id).await {
@@ -364,8 +395,45 @@ pub async fn sign_instance(
     */
 
     // 2. Validate signer is required
-    // TODO: Check if signer is in required_signers list
-    info!("Signer validation skipped (mock): {}", request.signer_address);
+    info!("Validating signer: {}", request.signer_address);
+
+    // Get instance to check required signers
+    let instance = match state.sui.get_instance(&instance_id).await {
+        Ok(inst) => inst,
+        Err(e) => {
+            error!("Failed to get instance {}: {}", instance_id, e);
+            return ApiResponse::error(format!("Instance not found: {}", e));
+        }
+    };
+
+    // Check if signer is in required_signers list
+    let is_required_signer = instance.required_signers.iter()
+        .any(|s| s.sui_address == request.signer_address);
+
+    if !is_required_signer {
+        error!(
+            "Signer {} is not authorized to sign instance {}",
+            request.signer_address, instance_id
+        );
+        return ApiResponse::error(format!(
+            "Signer {} is not authorized for this contract instance",
+            request.signer_address
+        ));
+    }
+
+    // Check if signer has already signed
+    let already_signed = instance.required_signers.iter()
+        .any(|s| s.sui_address == request.signer_address && s.signed_at.is_some());
+
+    if already_signed {
+        warn!("Signer {} has already signed instance {}", request.signer_address, instance_id);
+        return ApiResponse::error(format!(
+            "Signer {} has already signed this contract",
+            request.signer_address
+        ));
+    }
+
+    info!("Signer {} validated successfully for instance {}", request.signer_address, instance_id);
 
     // 3. Record signature on Sui blockchain
     // TODO: Uncomment when Sui SDK is available

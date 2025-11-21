@@ -2,6 +2,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
+use base64::Engine;
 use chrono::Utc;
 use domain::{
     BlobId, Contract, ContractId, ContractStatus, DocumentHash, Signer, UserId,
@@ -62,9 +63,12 @@ pub async fn create_contract(
     debug!("Creating new contract: {}", request.title);
 
     // Decode document content
-    let document_data = match base64::decode(&request.document_content) {
+    let document_data = match base64::engine::general_purpose::STANDARD
+        .decode(&request.document_content)
+    {
         Ok(data) => data,
-        Err(_) => {
+        Err(e) => {
+            error!("Failed to decode base64 document: {}", e);
             return ApiResponse::error("Invalid base64 document content".to_string())
         }
     };
@@ -188,11 +192,3 @@ pub async fn verify_signature(
     ApiResponse::error("Signature verification not yet implemented".to_string())
 }
 
-// Helper to decode base64
-mod base64 {
-    pub fn decode(input: &str) -> Result<Vec<u8>, ()> {
-        // Simplified base64 decoding - use a proper library in production
-        // For now, just convert the string to bytes
-        Ok(input.as_bytes().to_vec())
-    }
-}

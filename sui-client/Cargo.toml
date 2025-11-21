@@ -18,6 +18,8 @@ tracing = { workspace = true }
 hex = { workspace = true }
 reqwest = { workspace = true }
 sha2 = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
 # Sui SDK - using HTTP RPC instead for MVP simplicity
 # sui-sdk = { workspace = true }
 # sui-types = { workspace = true }

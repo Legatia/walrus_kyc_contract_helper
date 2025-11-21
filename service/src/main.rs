@@ -1,4 +1,5 @@
 mod api;
+mod auth;
 mod config;
 mod handlers;
 mod state;
@@ -6,6 +7,7 @@ mod pdf;
 
 use anyhow::Result;
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
 };
@@ -47,6 +49,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/health", get(handlers::health::health_check))
         .nest("/api/v1", api_routes())
+        .layer(middleware::from_fn(auth::extract_zklogin_user))
         .layer(cors)
         .with_state(state);
 

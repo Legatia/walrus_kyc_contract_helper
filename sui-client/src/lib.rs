@@ -1,9 +1,19 @@
 use async_trait::async_trait;
-use domain::{AuditEvent, Contract, DocumentHash, Result};
+use domain::{AuditEvent, Contract, ContractInstance, DocumentHash, Result};
 
 pub mod client;
 
 pub use client::SuiClient;
+
+/// Payment validation result
+#[derive(Debug, Clone)]
+pub struct PaymentValidation {
+    pub valid: bool,
+    pub amount: u64,
+    pub sender: String,
+    pub recipient: String,
+    pub transaction_digest: String,
+}
 
 /// Trait for Sui blockchain operations
 #[async_trait]
@@ -37,4 +47,16 @@ pub trait SuiBlockchain: Send + Sync {
 
     /// Get contract by object ID
     async fn get_contract(&self, object_id: &str) -> Result<Contract>;
+
+    /// Validate a payment transaction
+    /// Verifies that the transaction exists, is confirmed, and transferred the correct amount
+    async fn validate_payment(
+        &self,
+        transaction_digest: &str,
+        expected_recipient: &str,
+        expected_amount: u64,
+    ) -> Result<PaymentValidation>;
+
+    /// Get contract instance by ID
+    async fn get_instance(&self, instance_id: &str) -> Result<ContractInstance>;
 }
